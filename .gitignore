@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.env
+analysis.db
+data/
+celerybeat-schedule
+venv/

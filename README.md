@@ -3,254 +3,131 @@ Financial Document Analyzer – Debug Fix & Production Upgrade
 
 This project is an AI-powered Financial Document Analyzer built using CrewAI and FastAPI.
 
-The original codebase contained multiple logical, architectural, and safety issues.
-This submission fixes all bugs and upgrades the system into a production-ready AI microservice.
-
-Enhancements include:
-
-Fixed CrewAI integration bugs
-
-Safe, evidence-based financial analysis prompts
-
-Redis + Celery queue worker for concurrent request handling
-
-SQLite database integration for storing results
-
-Structured API architecture
+The original codebase contained architectural, dependency, and import-related issues.
+This version includes all debug fixes and production-level improvements.
 
 🐛 Bugs Identified & Fixes
-1️⃣ Undefined LLM Initialization
+1. Missing tools.py
 
-Issue:
+Issue: ModuleNotFoundError: No module named 'app.tools'
 
-llm = llm
+Fix: Recreated tools.py inside the app package and corrected imports.
 
-This caused runtime failure.
+2. Incorrect Import Structure
 
-Fix:
-Properly initialized CrewAI LLM using environment variable:
+Issue: Package imports failed when running directly.
 
-llm = LLM(
-    model="gpt-4o-mini",
-    api_key=os.getenv("OPENAI_API_KEY")
-)
+Fix: Used python -m app.main and proper package-based imports.
 
-2️⃣ Incorrect Tool Usage
+3. Missing Dependencies
 
-Issue:
-tool=[...] used instead of tools=[...]
+Issue: fastapi and python-multipart were not installed.
 
-Fix:
-Replaced with correct CrewAI tool initialization and implemented BaseTool subclass.
+Fix: Added required dependencies to requirements.txt.
 
+4. Server Not Starting
 
-3️⃣ PDF Loader Not Imported
+Issue: Running python app/main.py did not start the server.
 
-Issue:
-Pdf(file_path=path).load() was undefined.
+Fix: Used uvicorn app.main:app --reload.
 
-Fix:
-Replaced with PyPDFLoader from langchain-community.
-
-
-4️⃣ File Path Not Passed to Crew
-
-Issue:
-Uploaded file path was never passed to the CrewAI task.
-
-Fix:
-Updated kickoff() call to include:
-
-{
-  "query": query,
-  "file_path": file_path
-}
-
-
-5️⃣ Unsafe & Hallucination-Based Prompts
-
-Issue:
-Agents were instructed to:
-
-Fabricate financial advice
-
-Generate fake URLs
-
-Ignore document content
-
-Provide non-compliant recommendations
-
-Fix:
-Rewrote prompts to:
-
-Enforce evidence-based analysis
-
-Prevent hallucination
-
-Restrict analysis strictly to document content
-
-Provide structured financial reporting
-
-6️⃣ Blocking API Execution
-
-Issue:
-Long-running AI tasks blocked FastAPI requests.
-
-Fix:
-Implemented Redis + Celery queue worker for asynchronous processing.
-
-7️⃣ No Persistence Layer
-
-Issue:
-Analysis results were not stored.
-
-Fix:
-Added SQLite database using SQLAlchemy to store:
-
-Filename
-
-User query
-
-AI-generated analysis
-
-Timestamp
-
-8️⃣ Missing Dependencies
-
-Added required packages:
-
-langchain-community
-
-pypdf
-
-sqlalchemy
-
-celery
-
-redis
-
-python-dotenv
-
-uvicorn
-
-🚀 Setup Instructions
-
-1️⃣ Clone Repository
+⚙️ Setup Instructions
+Clone the Repository
 git clone <your-repo-link>
 cd financial-document-analyzer
-
-2️⃣ Install Dependencies
+Create Virtual Environment
+python -m venv venv
+venv\Scripts\activate
+Install Dependencies
 pip install -r requirements.txt
-
-3️⃣ Create Environment File
-
-Create a .env file:
-
-OPENAI_API_KEY=your_key_here
-
-4️⃣ Start Redis Server
-redis-server
-
-5️⃣ Start Celery Worker
-celery -A app.celery_worker.celery worker --loglevel=info
-
-6️⃣ Run FastAPI Application
+Run the Application
 uvicorn app.main:app --reload
+
+Open in browser:
+
+http://127.0.0.1:8000/docs
+
 📡 API Documentation
-
-Base URL:
-
-http://localhost:8000
-🔹 Health Check
-
-GET /
-
-http://localhost:8000/
-
-Response:
-
-{
-  "message": "Financial Document Analyzer API is running"
-}
-🔹 Analyze Financial Document
+POST /analyze
 
 POST /analyze
 
-Form Data:
+Analyzes an uploaded financial document using CrewAI agents and returns structured financial insights.
 
-file → PDF file
+📥 Request
 
-query → Analysis question
+Content-Type: multipart/form-data
 
-Example CURL Request:
-curl -X POST \
-  -F "file=@tesla.pdf" \
-  -F "query=Analyze revenue growth and risks" \
-  http://localhost:8000/analyze
-Response:
+Form Field:
+
+Field Name	Type	Required	Description
+file	File (PDF / TXT)	Yes	Financial document to analyze
+📝 Example Request (Swagger UI)
+
+Upload:
+
+A PDF financial statement
+OR
+
+A .txt file containing financial data
+
+Example text file content:
+
+Company: ABC Ltd
+Revenue: $2,000,000
+Expenses: $1,200,000
+Net Profit: $800,000
+Assets: $5,000,000
+Liabilities: $2,000,000
+📤 Example Response
 {
-  "status": "processing",
-  "task_id": "celery-task-id"
+  "company": "ABC Ltd",
+  "revenue": 2000000,
+  "expenses": 1200000,
+  "net_profit": 800000,
+  "risk_assessment": "Low Risk",
+  "financial_summary": "The company shows strong profitability with healthy asset coverage."
 }
-🏗 System Architecture
+⚙️ Internal Processing Flow
 
-User → FastAPI → Redis → Celery Worker → CrewAI → SQLite Database → Response
+File is uploaded via FastAPI.
 
-🎯 Bonus Implementations
-Queue Worker Model
+File content is extracted and parsed.
 
-Redis used as broker
+CrewAI agents:
 
-Celery handles background processing
+Financial Analyst Agent
 
-Enables concurrent request handling
+Risk Assessment Agent
 
-Prevents API blocking
+Summary Agent
 
-Database Integration
+Structured output is generated.
 
-SQLite database
+Results are returned as JSON.
 
-Stores financial analysis results
+(Optional) Stored in database.
 
-Enables persistence and audit tracking
+🔍 How to Test
 
-🛡 Responsible AI Improvements
+Start the server:
 
-No fabricated financial advice
+uvicorn app.main:app --reload
 
-No hallucinated URLs
+Open:
 
-Evidence-based reporting
+http://127.0.0.1:8000/docs
 
-Structured financial analysis
+Use the /analyze endpoint.
 
-Clean agent architecture
+Upload a sample financial document.
 
-🧠 Technologies Used
+Click Execute.
 
-FastAPI
+🚀 Bonus Features
 
-CrewAI
+Celery worker integration for background processing
 
-Celery
+Database support for storing analysis results
 
-Redis
-
-SQLite
-
-SQLAlchemy
-
-LangChain PDF Loader
-
-📈 Future Improvements
-
-Add authentication layer
-
-Add structured JSON financial metrics
-
-Add task status retrieval endpoint
-
-Add Docker containerization
-
-Add support for CSV and Excel financial documents
+Clean project structure for scalability
